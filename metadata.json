@@ -1,0 +1,8 @@
+{
+  "name": "NSN969 MULTIVIEW",
+  "description": "The official streaming hub for the NSN969 Family, featuring a custom high-performance multiview player, floating background audio player, dual-language Support (English / Indonesian), and an administrative control suite for streamers and audio playlists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

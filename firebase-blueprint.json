@@ -1,0 +1,268 @@
+{
+  "entities": {
+    "Streamer": {
+      "title": "Streamer",
+      "description": "Represents a streamer broadcasting within the NSN969 Network",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the streamer"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the streamer"
+        },
+        "platform": {
+          "type": "string",
+          "enum": ["youtube", "tiktok", "custom"],
+          "description": "Stream hosting platform"
+        },
+        "handle": {
+          "type": "string",
+          "description": "Twitch channel name or YouTube video/channel ID"
+        },
+        "isFeatured": {
+          "type": "boolean",
+          "description": "Flag indicating if the streamer is highlighted on dashboard"
+        },
+        "category": {
+          "type": "string",
+          "description": "Gaming category or stream genre"
+        }
+      },
+      "required": ["id", "name", "platform", "handle", "isFeatured"]
+    },
+    "Track": {
+      "title": "Track",
+      "description": "A database backsound ambient entry for the floating audio deck",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the track"
+        },
+        "title": {
+          "type": "string",
+          "description": "Song title"
+        },
+        "artist": {
+          "type": "string",
+          "description": "Synthesis artist or creator"
+        },
+        "url": {
+          "type": "string",
+          "description": "Direct audio URL"
+        }
+      },
+      "required": ["id", "title", "artist", "url"]
+    },
+    "GlobalConfig": {
+      "title": "GlobalConfig",
+      "description": "Global settings and warning protocols for the system",
+      "type": "object",
+      "properties": {
+        "announcement_en": {
+          "type": "string",
+          "description": "Siren system warning in English"
+        },
+        "announcement_id": {
+          "type": "string",
+          "description": "Siren system warning in Indonesian"
+        },
+        "announcementActive": {
+          "type": "boolean",
+          "description": "Flag to control visibility of the alert ticker"
+        },
+        "maintenanceMode": {
+          "type": "boolean",
+          "description": "Forbids access for non-operator connections"
+        }
+      },
+      "required": ["announcement_en", "announcement_id", "announcementActive", "maintenanceMode"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Represents a message sent in the Discord-style community chat",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the message"
+        },
+        "channelId": {
+          "type": "string",
+          "description": "Channel identifier (e.g., general, mabar, music)"
+        },
+        "userName": {
+          "type": "string",
+          "description": "Display name of the sender"
+        },
+        "userAvatar": {
+          "type": "string",
+          "description": "Seed or representation color of avatar"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User identifier if authenticated"
+        },
+        "userRole": {
+          "type": "string",
+          "description": "Role string (e.g., ADMIN, MEMBER, VISITOR)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Message text content"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation time"
+        }
+      },
+      "required": ["id", "channelId", "userName", "content", "createdAt"]
+    },
+    "CommunityAccount": {
+      "title": "CommunityAccount",
+      "description": "Represents a custom username/password registration profile",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Unique user handle"
+        },
+        "password": {
+          "type": "string",
+          "description": "Masked/simple validation password"
+        },
+        "role": {
+          "type": "string",
+          "description": "ADMIN or MEMBER"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server record time"
+        }
+      },
+      "required": ["username", "password", "role"]
+    },
+    "CommunityChannel": {
+      "title": "CommunityChannel",
+      "description": "Represents a customizable text channel in Discord-style community chat",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "adminOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "name", "description", "adminOnly"]
+    },
+    "CommunityBannedUser": {
+      "title": "CommunityBannedUser",
+      "description": "Represents a banned user",
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "bannedBy": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["username"]
+    },
+    "CommunityGenericAdminEntity": {
+      "title": "CommunityGenericAdminEntity",
+      "description": "Generic structure for small community admin collections (bots, hooks, events)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/streamers/{streamerId}": {
+      "schema": "Streamer",
+      "description": "Collection of all authorized broadcasters"
+    },
+    "/tracks/{trackId}": {
+      "schema": "Track",
+      "description": "Collection of all available songs in the sound database"
+    },
+    "/settings/global": {
+      "schema": "GlobalConfig",
+      "description": "Singleton configuration document containing active terminal parameters"
+    },
+    "/community_chats/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Real-time Discord-style community chat messages"
+    },
+    "/community_users/{username}": {
+      "schema": "CommunityAccount",
+      "description": "Collection of custom registered username credentials"
+    },
+    "/community_channels/{channelId}": {
+      "schema": "CommunityChannel",
+      "description": "Customizable list of channels managed by admin"
+    },
+    "/community_banned/{username}": {
+      "schema": "CommunityBannedUser",
+      "description": "Record of users blacklisted by admins"
+    },
+    "/community_config/{docId}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Global custom community properties"
+    },
+    "/community_suggestions/{suggestionId}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Community user suggested/saran items"
+    },
+    "/community_audit_logs/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Administrative action logs"
+    },
+    "/community_invites/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Community dynamic invites links"
+    },
+    "/community_webhooks/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Integrations/webhooks configuration"
+    },
+    "/community_bots/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "System chat bots"
+    },
+    "/community_emojis/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Custom chat emojis"
+    },
+    "/community_reports/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "User report filings"
+    },
+    "/community_events/{id}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Community ongoing/scheduled events"
+    },
+    "/test/{docId}": {
+      "schema": "CommunityGenericAdminEntity",
+      "description": "Connection verification document"
+    }
+  }

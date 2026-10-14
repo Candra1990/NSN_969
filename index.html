@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NSN969 MULTIVIEW | The Family HQ</title>
+    <meta name="description" content="The official streaming hub for the NSN969 Family, featuring a custom high-performance multiview player." />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href="/images/nsn969logo.png" />
+    <link rel="apple-touch-icon" href="/images/nsn969logo.png" />
+    <script>
+      // Early-stage script error interceptor to handle cross-origin "Script error." and unhandled promise/API rejections silently
+      window.addEventListener('error', function(event) {
+        if (event.message && (event.message.includes('Script error') || event.message.includes('Script error.'))) {
+          console.warn('[NSN969 Early Guard] Silenced cross-origin script error:', event.message);
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+        }
+      }, { capture: true });
+      window.addEventListener('unhandledrejection', function(event) {
+        console.warn('[NSN969 Early Guard] Silenced unhandled rejection:', event.reason);
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      }, { capture: true });
+    </script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4797046449942059" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

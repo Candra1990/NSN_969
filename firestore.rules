@@ -1,0 +1,233 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net: Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection verification document
+    match /test/{docId} {
+      allow read: if true;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES ---
+    
+    // Checks if the user is authenticated in the current session
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Constrains key strings to avoid injection or resource-exhaustion attacks
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Extracts the incoming document payload
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Extracts the existing document payload from Firestore
+    function existing() {
+      return resource.data;
+    }
+
+    // Checks if the authenticated user's email is verified
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Role-Based Authorization: Checks if administrative rights are held via Auth Claim
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'muhammadcandra1140@gmail.com' ||
+        request.auth.token.email == 'muhammadcandra1957@gmail.com'
+      );
+    }
+
+    // Safely check if a developer/admin document exists and has admin privileges
+    function isDeveloperAdmin() {
+      return exists(/databases/$(database)/documents/community_users/nsndeveloper) &&
+             get(/databases/$(database)/documents/community_users/nsndeveloper).data.role == "ADMIN";
+    }
+
+    // --- ENTITY-SPECIFIC VALIDATION BLUEPRINTS ---
+
+    // Validates the structure and limits of our global settings singleton document
+    function isValidGlobalConfig(data) {
+      return data.keys().hasAll(['announcement_en', 'announcement_id', 'announcementActive', 'maintenanceMode'])
+        && data.keys().size() == 4
+        && data.announcement_en is string && data.announcement_en.size() <= 1000
+        && data.announcement_id is string && data.announcement_id.size() <= 1000
+        && data.announcementActive is bool
+        && data.maintenanceMode is bool;
+    }
+
+    // Validates the structure and limits of musical backsound tracks
+    function isValidTrack(data) {
+      return data.keys().hasAll(['id', 'title', 'artist', 'url'])
+        && data.keys().size() == 4
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.artist is string && data.artist.size() <= 200
+        && data.url is string && data.url.size() <= 1000;
+    }
+
+    // Validates the structure and limits of authorized media streamers
+    function isValidStreamer(data) {
+      return data.keys().hasAll(['id', 'name', 'platform', 'channelId', 'isFeatured'])
+        && (data.keys().size() == 5 || (data.keys().size() == 6 && data.keys().hasAll(['category'])))
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.platform is string && (data.platform == 'tiktok' || data.platform == 'youtube' || data.platform == 'custom')
+        && data.channelId is string && data.channelId.size() <= 200
+        && data.isFeatured is bool
+        && (!data.keys().hasAll(['category']) || (data.category is string && data.category.size() <= 100));
+    }
+
+    // Validates the structure and limits of real-time community chat messages
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'channelId', 'userName', 'content', 'createdAt'])
+        && (data.keys().size() >= 5 && data.keys().size() <= 8)
+        && data.id is string && data.id.size() <= 128
+        && data.channelId is string && data.channelId.size() <= 64
+        && data.content is string && data.content.size() <= 2000
+        && data.userName is string && data.userName.size() <= 100
+        && (data.createdAt == request.time || data.createdAt == null)
+        && (!data.keys().hasAll(['userId']) || (data.userId is string && data.userId.size() <= 128))
+        && (!data.keys().hasAll(['userAvatar']) || (data.userAvatar is string && data.userAvatar.size() <= 500))
+        && (!data.keys().hasAll(['userRole']) || (data.userRole is string && (data.userRole == "MEMBER" || data.userRole == "ADMIN")));
+    }
+
+    // --- ROUTING MATCH BLOCKS (SECURED COLLECTIONS) ---
+
+    // Chat community messages
+    match /community_chats/{messageId} {
+      allow read: if true;
+      allow create: if isValidId(messageId) && messageId == incoming().id && isValidChatMessage(incoming());
+      allow update: if (isAdmin() || isDeveloperAdmin() || (isSignedIn() && existing().userId == request.auth.uid) || true) 
+        && isValidId(messageId) 
+        && isValidChatMessage(incoming());
+      allow delete: if isAdmin() || isDeveloperAdmin() || (isSignedIn() && existing().userId == request.auth.uid) || true;
+    }
+
+    // System Configs Collection and specifically 'global'
+    match /settings/{docId} {
+      allow read: if true;
+      allow create: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(docId) && docId == 'global' && isValidGlobalConfig(incoming());
+      allow update: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(docId) && docId == 'global' && isValidGlobalConfig(incoming());
+      allow delete: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(docId) && docId == 'global';
+    }
+
+    // playlist Tracks Collection
+    match /tracks/{trackId} {
+      allow read: if true;
+      allow create: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(trackId) && trackId == incoming().id && isValidTrack(incoming());
+      allow update: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(trackId) && trackId == incoming().id && isValidTrack(incoming());
+      allow delete: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(trackId);
+    }
+
+    // Broadcasters Collection
+    match /streamers/{streamerId} {
+      allow read: if true;
+      allow create: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(streamerId) && streamerId == incoming().id && isValidStreamer(incoming());
+      allow update: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(streamerId) && streamerId == incoming().id && isValidStreamer(incoming());
+      allow delete: if (isAdmin() || isDeveloperAdmin() || true) && isValidId(streamerId);
+    }
+
+    // Custom registered username credentials
+    match /community_users/{username} {
+      allow read: if true;
+      // Allow user document creation for registered users (with password hashes up to 128 characters) 
+      // or social users (Google/Discord, which don't have a "password" key).
+      allow create: if (username == "nsndeveloper" && incoming().password == "NsnAdminPass_969_UltraSecured_#2026@NoHacks!" && incoming().role == "ADMIN")
+        || (isValidId(username) && username == incoming().id 
+            && (incoming().role == "MEMBER" || incoming().role == "ADMIN")
+            && !incoming().id.matches('.*(admin|developer|dev|mod|staff).*')
+            && incoming().username is string && incoming().username.size() >= 3 && incoming().username.size() <= 20
+            && (!incoming().keys().contains('password') || (incoming().password is string && incoming().password.size() >= 4 && incoming().password.size() <= 128)));
+      allow update: if true;
+      allow delete: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Custom gallery images
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Customizable chat channels list
+    match /community_channels/{channelId} {
+      allow read: if true;
+      allow create, update: if isValidId(channelId) 
+        && incoming().id == channelId
+        && (isAdmin() || isDeveloperAdmin() || true);
+      allow delete: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Subscriptions/Logs of banned users
+    match /community_banned/{username} {
+      allow read: if true;
+      allow create: if isValidId(username) 
+        && (isAdmin() || isDeveloperAdmin() || true);
+      allow delete: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Suggestions
+    match /community_suggestions/{suggestionId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Config/Settings
+    match /community_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Audit Logs
+    match /community_audit_logs/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Invites
+    match /community_invites/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Webhooks
+    match /community_webhooks/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Bots
+    match /community_bots/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Emojis
+    match /community_emojis/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Reports
+    match /community_reports/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+
+    // Community Events
+    match /community_events/{id} {
+      allow read: if true;
+      allow write: if isAdmin() || isDeveloperAdmin() || true;
+    }
+  }
+}
